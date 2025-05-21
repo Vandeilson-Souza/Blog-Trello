@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Trello - Painel de Posts</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">Blog Trello</a>
+            <button class="btn btn-light" onclick="refreshPosts()">
+                <i class="bi bi-arrow-clockwise"></i> Atualizar Posts
+            </button>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row mb-4">
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <form id="filterForm" method="GET" action="/">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control" id="searchInput" name="search" 
+                                           placeholder="Buscar por título..." value="{{ request.args.get('search', '') }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-select" id="categoryFilter" name="category">
+                                        <option value="">Todas as categorias</option>
+                                        {% for category in categories %}
+                                        <option value="{{ category }}" {% if request.args.get('category') == category %}selected{% endif %}>
+                                            {{ category }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-select" id="statusFilter" name="status">
+                                        <option value="">Todos os status</option>
+                                        <option value="never" {% if request.args.get('status') == 'never' %}selected{% endif %}>
+                                            Nunca revisado
+                                        </option>
+                                        <option value="recent" {% if request.args.get('status') == 'recent' %}selected{% endif %}>
+                                            Atualizado (< 30 dias)
+                                        </option>
+                                        <option value="old" {% if request.args.get('status') == 'old' %}selected{% endif %}>
+                                            Conferir conteúdo (> 30 dias)
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row" id="postsContainer">
+            {% for post in posts %}
+            <div class="col-md-6 mb-4 post-card" 
+                 data-title="{{ post.title|lower }}"
+                 data-category="{{ post.category }}"
+                 data-status="{{ 'sent' if post.trello_card_id else 'pending' }}">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="{{ post.url }}" target="_blank">{{ post.title }}</a>
+                        </h5>
+                        <p class="card-text">
+                            <small class="text-muted">
+                                <i class="bi bi-calendar"></i> Atualizado em: {{ post.updated_at.strftime('%d/%m/%Y %H:%M') }}
+                            </small>
+                        </p>
+                        <p class="card-text">
+                            <span class="badge bg-secondary">{{ post.source }} - {{ post.category }}</span>
+                            {% if post.trello_card_id %}
+                            <span class="badge bg-success">Enviado para Trello</span>
+                            {% endif %}
+                            {% if post.review_status == 'never' %}
+                            <span class="badge bg-danger">Nunca revisado</span>
+                            {% elif post.review_status == 'recent' %}
+                            <span class="badge bg-success">Atualizado</span>
+                            {% elif post.review_status == 'old' %}
+                            <span class="badge bg-warning">Conferir conteúdo</span>
+                            {% endif %}
+                            {% if post.last_review_date %}
+                            <small class="text-muted">
+                                <i class="bi bi-clock-history"></i> Última revisão: {{ post.last_review_date.strftime('%d/%m/%Y') }}
+                            </small>
+                            {% endif %}
+                        </p>
+                        <button class="btn btn-primary" onclick="openTrelloModal({{ post.id }}, '{{ post.title }}', '{{ post.url }}')">
+                            <i class="bi bi-trello"></i> Criar Tarefa no Trello
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if pagination and pagination.pages > 1 %}
+        <nav aria-label="Navegação de páginas" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if pagination.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('index', page=pagination.prev_num, **request.args) }}">Anterior</a>
+                </li>
+                {% endif %}
+
+                {% for page in pagination.iter_pages() %}
+                    {% if page %}
+                        <li class="page-item {% if page == pagination.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('index', page=page, **request.args) }}">{{ page }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if pagination.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('index', page=pagination.next_num, **request.args) }}">Próxima</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+
+    <!-- Modal do Trello -->
+    <div class="modal fade" id="trelloModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Criar Tarefa no Trello</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="trelloForm">
+                        <input type="hidden" id="postId">
+                        <div class="mb-3">
+                            <label class="form-label">Nome da Tarefa</label>
+                            <input type="text" class="form-control" id="taskName" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Link do Blog</label>
+                            <input type="url" class="form-control" id="blogUrl" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Responsável</label>
+                            <select class="form-select" id="assignee" required>
+                                <option value="">Selecione um responsável</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Prazo</label>
+                            <input type="text" class="form-control" id="dueDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Etiquetas</label>
+                            <select class="form-select" id="labels" multiple>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descrição/Comentários</label>
+                            <textarea class="form-control" id="description" rows="4"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="createTrelloCard()">Enviar para Trello</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+    <script>
+        // Inicializa o date picker
+        flatpickr("#dueDate", {
+            locale: "pt",
+            dateFormat: "Y-m-d",
+            minDate: "today"
+        });
+
+        // Remove os event listeners antigos dos filtros
+        document.getElementById('searchInput').removeEventListener('input', filterPosts);
+        document.getElementById('categoryFilter').removeEventListener('change', filterPosts);
+        document.getElementById('statusFilter').removeEventListener('change', filterPosts);
+
+        // Adiciona o evento de submit ao formulário
+        document.getElementById('filterForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const params = new URLSearchParams(formData);
+            window.location.href = '/?' + params.toString();
+        });
+
+        function openTrelloModal(postId, title, url) {
+            document.getElementById('postId').value = postId;
+            document.getElementById('taskName').value = `Revisar post: ${title}`;
+            document.getElementById('blogUrl').value = url;
+            
+            // Carrega os membros do Trello
+            fetch('/get_trello_members')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const assigneeSelect = document.getElementById('assignee');
+                        assigneeSelect.innerHTML = '<option value="">Selecione um responsável</option>';
+                        data.members.forEach(member => {
+                            const option = document.createElement('option');
+                            option.value = member.id;
+                            option.textContent = `${member.name} (${member.username})`;
+                            assigneeSelect.appendChild(option);
+                        });
+                    } else {
+                        alert('Erro ao carregar membros: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Erro ao carregar membros: ' + error);
+                });
+            
+            const modal = new bootstrap.Modal(document.getElementById('trelloModal'));
+            modal.show();
+        }
+
+        function createTrelloCard() {
+            const data = {
+                post_id: document.getElementById('postId').value,
+                assignee: document.getElementById('assignee').value,
+                due_date: document.getElementById('dueDate').value,
+                labels: Array.from(document.getElementById('labels').selectedOptions).map(opt => opt.value),
+                description: document.getElementById('description').value
+            };
+
+            fetch('/create_trello_card', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Erro ao criar card: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Erro ao criar card: ' + error);
+            });
+        }
+
+        function refreshPosts() {
+            fetch('/refresh_posts')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Erro ao atualizar posts');
+                    }
+                })
+                .catch(error => {
+                    alert('Erro ao atualizar posts: ' + error);
+                });
+        }
+
+        // Preenche as categorias no filtro
+        const categories = new Set();
+        document.querySelectorAll('.post-card').forEach(card => {
+            categories.add(card.dataset.category);
+        });
+        
+        const categoryFilter = document.getElementById('categoryFilter');
+        categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categoryFilter.appendChild(option);
+        });
+    </script>
+</body>
+</html> 
