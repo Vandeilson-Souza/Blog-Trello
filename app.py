@@ -227,6 +227,10 @@ def create_trello_card():
     post = Post.query.get_or_404(post_id)
     
     try:
+        # Ajusta a data para o final do dia no fuso horário local
+        if due_date:
+            due_date = f"{due_date}T23:59:59"
+            
         # Busca o nome do responsável
         assignee_name = "Não atribuído"
         if assignee_id:
@@ -306,6 +310,10 @@ def create_independent_card():
     description = data.get('description', '')
     
     try:
+        # Ajusta a data para o final do dia no fuso horário local
+        if due_date:
+            due_date = f"{due_date}T23:59:59"
+        
         # Define o prefixo baseado no tipo
         if card_type == 'post':
             prefix = "📝 Post:"
