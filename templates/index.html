@@ -121,6 +121,19 @@
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="bi bi-building mr-1"></i>Fonte
+                        </label>
+                        <select id="sourceFilter" name="source" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all duration-300 text-gray-900">
+                            <option value="">Todas as fontes</option>
+                            {% for source in sources %}
+                            <option value="{{ source }}" {% if request.args.get('source') == source %}selected{% endif %}>
+                                {{ source }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="bi bi-tag mr-1"></i>Categoria
                         </label>
                         <select id="categoryFilter" name="category" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all duration-300 text-gray-900">

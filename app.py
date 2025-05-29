@@ -81,18 +81,20 @@ trello_client = TrelloClient(
 
 # Lista de URLs dos blogs
 BLOG_URLS = [
-    'https://meuatendimentovirtual.com.br/wp-json/wp/v2/docs?doc_category=35&per_page=100',
-    'https://meuatendimentovirtual.com.br/wp-json/wp/v2/docs?doc_category=51&per_page=100',
-    'https://meuatendimentovirtual.com.br/wp-json/wp/v2/docs?doc_category=50&per_page=100',
-    'https://meuatendimentovirtual.com.br/wp-json/wp/v2/docs?doc_category=45&per_page=100',
-    'https://meuatendimentovirtual.com.br/wp-json/wp/v2/docs?doc_category=46&per_page=100',
-    'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=27&per_page=100',
-    'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=4&per_page=100',
-    'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=9&per_page=100',
-    'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=28&per_page=100',
-    'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=29&per_page=100',
-    'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=32&per_page=100',
-    'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=30&per_page=100',
+   'https://meuatendimentovirtual.com.br/wp-json/wp/v2/docs?doc_category=35&per_page=100',
+   'https://meuatendimentovirtual.com.br/wp-json/wp/v2/docs?doc_category=51&per_page=100',
+   'https://meuatendimentovirtual.com.br/wp-json/wp/v2/docs?doc_category=50&per_page=100',
+   'https://meuatendimentovirtual.com.br/wp-json/wp/v2/docs?doc_category=45&per_page=100',
+   'https://meuatendimentovirtual.com.br/wp-json/wp/v2/docs?doc_category=46&per_page=100',
+   'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=27&per_page=100',
+   'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=4&per_page=100',
+   'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=9&per_page=100',
+   'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=28&per_page=100',
+   'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=29&per_page=100',
+   'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=32&per_page=100',
+   'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=30&per_page=100',
+   'https://blog.etalentos.com.br/wp-json/wp/v2/docs?doc_category=8&per_page=100',
+   'https://blog.etalentos.com.br/wp-json/wp/v2/docs?doc_category=7&per_page=100',
 ]
 
 def fetch_posts():
@@ -148,6 +150,7 @@ def index():
     category = request.args.get('category')
     status = request.args.get('status')
     search = request.args.get('search')
+    source = request.args.get('source')  # Novo filtro por fonte
     
     # Inicia a query
     query = Post.query
@@ -159,10 +162,16 @@ def index():
         query = query.filter_by(review_status=status)
     if search:
         query = query.filter(Post.title.ilike(f'%{search}%'))
+    if source:  # Aplica o filtro por fonte
+        query = query.filter_by(source=source)
     
     # Obtém todas as categorias únicas
     categories = db.session.query(Post.category).distinct().all()
     categories = [cat[0] for cat in categories if cat[0]]
+    
+    # Obtém todas as fontes únicas
+    sources = db.session.query(Post.source).distinct().all()
+    sources = [src[0] for src in sources if src[0]]
     
     # Aplica a paginação sempre
     pagination = query.order_by(Post.updated_at.desc()).paginate(
@@ -170,7 +179,7 @@ def index():
     )
     posts = pagination.items
     
-    return render_template('index.html', posts=posts, pagination=pagination, categories=categories)
+    return render_template('index.html', posts=posts, pagination=pagination, categories=categories, sources=sources)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
