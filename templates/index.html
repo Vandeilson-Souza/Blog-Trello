@@ -258,6 +258,15 @@
                     </div>
                     {% endif %}
 
+                    {% if post.review_status == 'never' %}
+                    <div class="flex items-center space-x-2">
+                        <button onclick="markPostAsUpdated('{{ post.id }}')" class="flex items-center space-x-1 text-gray-600 hover:text-primary-500 transition-colors duration-200">
+                            <i class="bi bi-check-circle"></i>
+                            <span class="text-sm">Marcar como Atualizado</span>
+                        </button>
+                    </div>
+                    {% endif %}
+
                     <button data-post-id="{{ post.id }}" data-post-title="{{ post.title }}" data-post-url="{{ post.url }}" onclick="openTrelloModal(this)" 
                             class="w-full bg-primary-500 hover:bg-primary-600 text-white px-4 py-3 rounded-xl font-medium transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg flex items-center justify-center">
                         <i class="bi bi-trello mr-2"></i>Criar Tarefa no Trello
@@ -883,6 +892,37 @@
                 if (e.target.id === 'alertModal') closeAlertModal();
             }
         });
+
+        // Função para marcar post como atualizado
+        function markPostAsUpdated(postId) {
+            if (confirm('Deseja marcar este post como atualizado?')) {
+                showLoading();
+                
+                fetch('/mark_post_updated', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ post_id: postId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+                    if (data.success) {
+                        showAlert('Sucesso', 'Post marcado como atualizado!', 'success');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showAlert('Erro', 'Erro ao atualizar post: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    hideLoading();
+                    showAlert('Erro', 'Erro ao atualizar post: ' + error, 'error');
+                });
+            }
+        }
     </script>
 </body>
 </html> 

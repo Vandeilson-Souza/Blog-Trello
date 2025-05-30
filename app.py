@@ -365,6 +365,30 @@ def create_independent_card():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/mark_post_updated', methods=['POST'])
+@login_required
+def mark_post_updated():
+    try:
+        data = request.get_json()
+        post_id = data.get('post_id')
+        
+        if not post_id:
+            return jsonify({'success': False, 'error': 'ID do post não fornecido'})
+        
+        # Atualiza o status do post
+        post = Post.query.get(post_id)
+        if not post:
+            return jsonify({'success': False, 'error': 'Post não encontrado'})
+            
+        # Atualiza a data da última revisão e o status
+        post.last_review_date = datetime.now()
+        post.update_review_status()
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
