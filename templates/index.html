@@ -505,19 +505,32 @@
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                <i class="bi bi-person mr-1"></i>Responsável
+                                <i class="bi bi-building mr-1"></i>Fonte
                             </label>
-                            <select id="cardAssignee" required 
+                            <select id="cardSource" 
                                     class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all duration-300 text-gray-900">
-                                <option value="">Selecione um responsável</option>
+                                <option value="">Selecione a fonte</option>
+                                {% for source in sources %}
+                                <option value="{{ source }}">{{ source }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <div class="lg:col-span-2">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                <i class="bi bi-card-heading mr-1"></i>Título
+                                <i class="bi bi-card-text mr-1"></i>Título
                             </label>
-                            <input type="text" id="cardTitle" required placeholder="Digite o título do card..."
-                                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all duration-300 text-gray-900">
+                            <input type="text" id="cardTitle" required 
+                                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all duration-300 text-gray-900"
+                                   placeholder="Digite o título do card">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                <i class="bi bi-person mr-1"></i>Responsável
+                            </label>
+                            <select id="cardAssignee" 
+                                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all duration-300 text-gray-900">
+                                <option value="">Selecione um responsável</option>
+                            </select>
                         </div>
                         <div class="lg:col-span-1">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
@@ -530,7 +543,7 @@
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="bi bi-calendar-event mr-1"></i>Prazo
                             </label>
-                            <input type="text" id="cardDueDate" required 
+                            <input type="text" id="cardDueDate" 
                                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all duration-300 text-gray-900">
                         </div>
                         <div class="lg:col-span-2">
@@ -794,18 +807,20 @@
         function createIndependentCard() {
             const cardType = document.getElementById('cardType').value;
             const title = document.getElementById('cardTitle').value;
+            const source = document.getElementById('cardSource').value;
             const link = document.getElementById('cardLink').value;
             const assignee = document.getElementById('cardAssignee').value;
             const dueDate = document.getElementById('cardDueDate').value;
             const description = document.getElementById('cardDescription').value;
 
-            if (!cardType || !title || !assignee || !dueDate) {
-                showAlert('Atenção', 'Por favor, preencha todos os campos obrigatórios.', 'warning');
+            if (!cardType || !title) {
+                showAlert('Atenção', 'Por favor, preencha o tipo e o título do card.', 'warning');
                 return;
             }
             
             const data = {
                 card_type: cardType,
+                source: source,
                 title: title,
                 link: link,
                 assignee: assignee,

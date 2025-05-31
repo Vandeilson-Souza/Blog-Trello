@@ -328,6 +328,7 @@ def create_independent_card():
     """Cria um card independente no Trello"""
     data = request.json
     card_type = data.get('card_type')
+    source = data.get('source')
     title = data.get('title')
     link = data.get('link', '')
     assignee_id = data.get('assignee')
@@ -341,11 +342,11 @@ def create_independent_card():
         
         # Define o prefixo baseado no tipo
         if card_type == 'post':
-            prefix = "📝 Post:"
+            prefix = "Criar Post:"
         elif card_type == 'tutorial':
-            prefix = "📖 Tutorial:"
+            prefix = "Criar Tutorial:"
         else:
-            prefix = "📋 Tarefa:"
+            prefix = "Tarefa:"
         
         # Busca o nome do responsável
         assignee_name = "Não atribuído"
@@ -357,8 +358,25 @@ def create_independent_card():
                     assignee_name = member.full_name
                     break
 
+        # Formata a data para exibição
+        display_date = "Não definido"
+        if due_date:
+            display_date = datetime.strptime(due_date, "%Y-%m-%dT%H:%M:%S").strftime("%d/%m/%Y")
+
         # Monta a descrição do card
-        card_description = f"**Responsável:** {assignee_name}\n**Prazo:** {due_date}\n\n"
+        card_description = ""
+        
+        if source:
+            card_description += f"**Fonte:** {source}\n"
+        
+        if assignee_id:
+            card_description += f"**Responsável:** {assignee_name}\n"
+        
+        if due_date:
+            card_description += f"**Prazo:** {display_date}\n"
+        
+        if card_description:
+            card_description += "\n"
         
         if link:
             card_description += f"**Link:** {link}\n\n"
