@@ -173,13 +173,29 @@ def index():
     sources = db.session.query(Post.source).distinct().all()
     sources = [src[0] for src in sources if src[0]]
     
+    # Obtém o total geral de posts
+    total_posts = query.count()
+    
+    # Obtém contagens por status
+    total_updated = query.filter_by(review_status='recent').count()
+    total_need_review = query.filter_by(review_status='old').count()
+    total_never_reviewed = query.filter_by(review_status='never').count()
+    
     # Aplica a paginação sempre
     pagination = query.order_by(Post.updated_at.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
     posts = pagination.items
     
-    return render_template('index.html', posts=posts, pagination=pagination, categories=categories, sources=sources)
+    return render_template('index.html', 
+                         posts=posts, 
+                         pagination=pagination, 
+                         categories=categories, 
+                         sources=sources,
+                         total_posts=total_posts,
+                         total_updated=total_updated,
+                         total_need_review=total_need_review,
+                         total_never_reviewed=total_never_reviewed)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
