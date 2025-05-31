@@ -82,25 +82,19 @@
             </h1>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div class="bg-white p-6 rounded-xl text-center shadow-md border border-gray-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                    <span class="text-3xl font-bold text-primary-500 block">{{ posts|length }}</span>
+                    <span class="text-3xl font-bold text-primary-500 block">{{ total_posts }}</span>
                     <div class="text-gray-600 text-sm font-medium mt-2">Total de Posts</div>
                 </div>
                 <div class="bg-white p-6 rounded-xl text-center shadow-md border border-gray-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                    <span class="text-3xl font-bold text-green-500 block">
-                        {{ posts|selectattr('review_status', 'equalto', 'recent')|list|length }}
-                    </span>
+                    <span class="text-3xl font-bold text-green-500 block">{{ total_updated }}</span>
                     <div class="text-gray-600 text-sm font-medium mt-2">Atualizados</div>
                 </div>
                 <div class="bg-white p-6 rounded-xl text-center shadow-md border border-gray-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                    <span class="text-3xl font-bold text-yellow-500 block">
-                        {{ posts|selectattr('review_status', 'equalto', 'old')|list|length }}
-                    </span>
+                    <span class="text-3xl font-bold text-yellow-500 block">{{ total_need_review }}</span>
                     <div class="text-gray-600 text-sm font-medium mt-2">Precisam Revisão</div>
                 </div>
                 <div class="bg-white p-6 rounded-xl text-center shadow-md border border-gray-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                    <span class="text-3xl font-bold text-red-500 block">
-                        {{ posts|selectattr('review_status', 'equalto', 'never')|list|length }}
-                    </span>
+                    <span class="text-3xl font-bold text-red-500 block">{{ total_never_reviewed }}</span>
                     <div class="text-gray-600 text-sm font-medium mt-2">Nunca Revisados</div>
                 </div>
             </div>
