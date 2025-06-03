@@ -93,6 +93,7 @@ BLOG_URLS = [
    'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=29&per_page=100',
    'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=32&per_page=100',
    'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=30&per_page=100',
+   'https://blog.eagenda.com.br/wp-json/wp/v2/docs?doc_category=35&per_page=100',
    'https://blog.etalentos.com.br/wp-json/wp/v2/docs?doc_category=8&per_page=100',
    'https://blog.etalentos.com.br/wp-json/wp/v2/docs?doc_category=7&per_page=100',
 ]
