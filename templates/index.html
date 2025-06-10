@@ -274,6 +274,10 @@
                             <i class="bi bi-check-circle"></i>
                             <span class="text-sm">Marcar como Atualizado</span>
                         </button>
+                        <button onclick="deletePost('{{ post.id }}')" class="flex items-center space-x-1 text-gray-600 hover:text-red-500 transition-colors duration-200">
+                            <i class="bi bi-trash"></i>
+                            <span class="text-sm">Excluir</span>
+                        </button>
                     </div>
                     {% endif %}
 
@@ -986,6 +990,37 @@
                 .catch(error => {
                     hideLoading();
                     showAlert('Erro', 'Erro ao atualizar post: ' + error, 'error');
+                });
+            }
+        }
+
+        // Função para excluir post
+        function deletePost(postId) {
+            if (confirm('Tem certeza que deseja excluir este post? Ele será recriado automaticamente se ainda existir no WordPress.')) {
+                showLoading();
+                
+                fetch('/delete_post', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ post_id: postId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+                    if (data.success) {
+                        showAlert('Sucesso', 'Post excluído com sucesso!', 'success');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showAlert('Erro', 'Erro ao excluir post: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    hideLoading();
+                    showAlert('Erro', 'Erro ao excluir post: ' + error, 'error');
                 });
             }
         }

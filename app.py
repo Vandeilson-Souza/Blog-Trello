@@ -446,6 +446,30 @@ def mark_post_updated():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/delete_post', methods=['POST'])
+@login_required
+def delete_post():
+    """Exclui um post do cache"""
+    try:
+        data = request.get_json()
+        post_id = data.get('post_id')
+        
+        if not post_id:
+            return jsonify({'success': False, 'error': 'ID do post não fornecido'})
+        
+        # Busca o post
+        post = Post.query.get(post_id)
+        if not post:
+            return jsonify({'success': False, 'error': 'Post não encontrado'})
+            
+        # Exclui o post
+        db.session.delete(post)
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
