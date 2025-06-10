@@ -115,6 +115,22 @@
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="bi bi-calendar mr-1"></i>Data Inicial
+                        </label>
+                        <input type="date" id="dateFrom" name="date_from" 
+                               value="{{ request.args.get('date_from', '') }}"
+                               class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all duration-300 text-gray-900">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="bi bi-calendar mr-1"></i>Data Final
+                        </label>
+                        <input type="date" id="dateTo" name="date_to" 
+                               value="{{ request.args.get('date_to', '') }}"
+                               class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all duration-300 text-gray-900">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="bi bi-building mr-1"></i>Fonte
                         </label>
                         <select id="sourceFilter" name="source" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all duration-300 text-gray-900">
@@ -501,6 +517,18 @@
                                 <option value="">Selecione o tipo</option>
                                 <option value="post">Criação de Post</option>
                                 <option value="tutorial">Criação de Tutorial</option>
+                                <option value="canva">Criar Publicação Canva</option>
+                            </select>
+                        </div>
+                        <div id="canvaTypeContainer" class="hidden">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                <i class="bi bi-image mr-1"></i>Tipo de Publicação
+                            </label>
+                            <select id="canvaType" 
+                                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all duration-300 text-gray-900">
+                                <option value="">Selecione o tipo</option>
+                                <option value="post">Post</option>
+                                <option value="story">Story</option>
                             </select>
                         </div>
                         <div>
@@ -552,6 +580,14 @@
                             </label>
                             <textarea id="cardDescription" rows="4" placeholder="Adicione detalhes sobre o card..."
                                       class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all duration-300 text-gray-900 resize-none"></textarea>
+                        </div>
+                        <div id="canvaInstructions" class="lg:col-span-2 hidden">
+                            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+                                <p class="text-blue-700">
+                                    <i class="bi bi-info-circle mr-2"></i>
+                                    Ao finalizar a criação do material no Canva, não se esqueça de anexar o link do material na descrição deste card.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </form>
@@ -812,9 +848,15 @@
             const assignee = document.getElementById('cardAssignee').value;
             const dueDate = document.getElementById('cardDueDate').value;
             const description = document.getElementById('cardDescription').value;
+            const canvaType = document.getElementById('canvaType').value;
 
             if (!cardType || !title) {
                 showAlert('Atenção', 'Por favor, preencha o tipo e o título do card.', 'warning');
+                return;
+            }
+
+            if (cardType === 'canva' && !canvaType) {
+                showAlert('Atenção', 'Por favor, selecione o tipo de publicação do Canva.', 'warning');
                 return;
             }
             
@@ -825,7 +867,8 @@
                 link: link,
                 assignee: assignee,
                 due_date: dueDate,
-                description: description
+                description: description,
+                canva_type: canvaType
             };
 
             showLoading();
@@ -855,6 +898,20 @@
                 showAlert('Erro', 'Erro ao criar card: ' + error, 'error');
             });
         }
+
+        // Controle de visibilidade dos campos do Canva
+        document.getElementById('cardType').addEventListener('change', function() {
+            const canvaTypeContainer = document.getElementById('canvaTypeContainer');
+            const canvaInstructions = document.getElementById('canvaInstructions');
+            
+            if (this.value === 'canva') {
+                canvaTypeContainer.classList.remove('hidden');
+                canvaInstructions.classList.remove('hidden');
+            } else {
+                canvaTypeContainer.classList.add('hidden');
+                canvaInstructions.classList.add('hidden');
+            }
+        });
 
         // Atualizar posts
         function refreshPosts() {

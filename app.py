@@ -151,7 +151,9 @@ def index():
     category = request.args.get('category')
     status = request.args.get('status')
     search = request.args.get('search')
-    source = request.args.get('source')  # Novo filtro por fonte
+    source = request.args.get('source')
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
     
     # Inicia a query
     query = Post.query
@@ -163,8 +165,12 @@ def index():
         query = query.filter_by(review_status=status)
     if search:
         query = query.filter(Post.title.ilike(f'%{search}%'))
-    if source:  # Aplica o filtro por fonte
+    if source:
         query = query.filter_by(source=source)
+    if date_from:
+        query = query.filter(Post.updated_at >= datetime.strptime(date_from, '%Y-%m-%d'))
+    if date_to:
+        query = query.filter(Post.updated_at <= datetime.strptime(date_to, '%Y-%m-%d'))
     
     # Obtém todas as categorias únicas
     categories = db.session.query(Post.category).distinct().all()
@@ -182,8 +188,8 @@ def index():
     total_need_review = query.filter_by(review_status='old').count()
     total_never_reviewed = query.filter_by(review_status='never').count()
     
-    # Aplica a paginação sempre
-    pagination = query.order_by(Post.updated_at.desc()).paginate(
+    # Aplica a paginação e ordenação (mais antigos primeiro)
+    pagination = query.order_by(Post.updated_at.asc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
     posts = pagination.items
@@ -335,6 +341,7 @@ def create_independent_card():
     assignee_id = data.get('assignee')
     due_date = data.get('due_date')
     description = data.get('description', '')
+    canva_type = data.get('canva_type', '')
     
     try:
         # Ajusta a data para o final do dia no fuso horário local
@@ -346,6 +353,8 @@ def create_independent_card():
             prefix = "Criar Post:"
         elif card_type == 'tutorial':
             prefix = "Criar Tutorial:"
+        elif card_type == 'canva':
+            prefix = f"Criar {canva_type.capitalize()} Canva:"
         else:
             prefix = "Tarefa:"
         
@@ -381,6 +390,19 @@ def create_independent_card():
         
         if link:
             card_description += f"**Link:** {link}\n\n"
+        
+        if card_type == 'canva':
+            card_description += f"**Tipo de Publicação:** {canva_type.capitalize()}\n\n"
+            card_description += "**Dimensões Recomendadas:**\n"
+            if canva_type == 'post':
+                card_description += "- 1080 x 1350 pixels\n\n"
+            elif canva_type == 'story':
+                card_description += "- 1080 x 1920 pixels\n\n"
+            
+            card_description += "**Instruções:**\n"
+            card_description += "1. Criar o material no Canva usando as dimensões acima\n"
+            card_description += "2. Ao finalizar, copiar o link do material\n"
+            card_description += "3. Anexar o link na descrição deste card\n\n"
         
         if description:
             card_description += f"**Detalhes:**\n{description}"
