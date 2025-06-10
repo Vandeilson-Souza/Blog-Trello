@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timedelta
 import requests
 import os
 from dotenv import load_dotenv
@@ -467,6 +467,36 @@ def delete_post():
         db.session.commit()
         
         return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/mark_recent_posts_updated', methods=['POST'])
+@login_required
+def mark_recent_posts_updated():
+    """Marca como atualizados todos os posts modificados nos últimos 30 dias"""
+    try:
+        # Calcula a data de 30 dias atrás
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+        
+        # Busca todos os posts modificados nos últimos 30 dias
+        recent_posts = Post.query.filter(Post.updated_at >= thirty_days_ago).all()
+        
+        # Contador de posts atualizados
+        updated_count = 0
+        
+        # Atualiza cada post
+        for post in recent_posts:
+            post.last_review_date = datetime.now()
+            post.update_review_status()
+            updated_count += 1
+        
+        # Salva as alterações
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'{updated_count} posts foram marcados como atualizados'
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 

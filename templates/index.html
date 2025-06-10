@@ -64,6 +64,10 @@
                         <i class="bi bi-plus-circle"></i>
                         <span>Criar Card</span>
                     </button>
+                    <button onclick="markRecentPostsUpdated()" class="flex items-center space-x-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/20 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
+                        <i class="bi bi-clock-history"></i>
+                        <span>Marcar Recentes</span>
+                    </button>
                     <button onclick="refreshPosts()" class="flex items-center space-x-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/20 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
                         <i class="bi bi-arrow-clockwise"></i>
                         <span>Atualizar</span>
@@ -1021,6 +1025,36 @@
                 .catch(error => {
                     hideLoading();
                     showAlert('Erro', 'Erro ao excluir post: ' + error, 'error');
+                });
+            }
+        }
+
+        // Função para marcar posts recentes como atualizados
+        function markRecentPostsUpdated() {
+            if (confirm('Deseja marcar como atualizados todos os posts modificados nos últimos 30 dias?')) {
+                showLoading();
+                
+                fetch('/mark_recent_posts_updated', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+                    if (data.success) {
+                        showAlert('Sucesso', data.message, 'success');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showAlert('Erro', 'Erro ao atualizar posts: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    hideLoading();
+                    showAlert('Erro', 'Erro ao atualizar posts: ' + error, 'error');
                 });
             }
         }
