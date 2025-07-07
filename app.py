@@ -473,13 +473,16 @@ def delete_post():
 @app.route('/mark_recent_posts_updated', methods=['POST'])
 @login_required
 def mark_recent_posts_updated():
-    """Marca como atualizados todos os posts modificados nos últimos 30 dias"""
+    """Marca como atualizados todos os posts modificados nos últimos 30 dias e que não estejam atualizados"""
     try:
         # Calcula a data de 30 dias atrás
         thirty_days_ago = datetime.now() - timedelta(days=30)
         
-        # Busca todos os posts modificados nos últimos 30 dias
-        recent_posts = Post.query.filter(Post.updated_at >= thirty_days_ago).all()
+        # Busca todos os posts modificados nos últimos 30 dias e que não estão atualizados
+        recent_posts = Post.query.filter(
+            Post.updated_at >= thirty_days_ago,
+            Post.review_status != 'recent'
+        ).all()
         
         # Contador de posts atualizados
         updated_count = 0
@@ -499,6 +502,140 @@ def mark_recent_posts_updated():
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/create_batch_cards', methods=['POST'])
+@login_required
+def create_batch_cards():
+    """Cria um card individual em lote com distribuição opcional na semana"""
+    data = request.json
+    card_type = data.get('card_type')
+    source = data.get('source')
+    assignee_ids = data.get('assignees', [])
+    canva_type = data.get('canva_type', '')
+    distribute_week = data.get('distribute_week', False)
+    start_day = data.get('start_day', 'monday')
+    titles = data.get('titles', [])
+    card_index = data.get('card_index', 0)
+    
+    try:
+        # Busca os nomes dos responsáveis
+        assignee_names = []
+        if assignee_ids:
+            board = trello_client.get_board(os.getenv('TRELLO_BOARD_ID'))
+            members = board.get_members()
+            for assignee_id in assignee_ids:
+                for member in members:
+                    if member.id == assignee_id:
+                        assignee_names.append(member.full_name)
+                        break
+
+        # Calcula as datas da semana baseada no dia de início
+        today = datetime.now()
+        
+        if distribute_week:
+            # Mapeia os dias da semana
+            day_mapping = {
+                'monday': 0, 'tuesday': 1, 'wednesday': 2, 
+                'thursday': 3, 'friday': 4
+            }
+            
+            # Calcula o próximo dia de início
+            start_day_num = day_mapping.get(start_day, 0)
+            current_weekday = today.weekday()
+            
+            # Se o dia de início já passou esta semana, vai para a próxima semana
+            if current_weekday > start_day_num:
+                days_until_start = 7 - current_weekday + start_day_num
+            else:
+                days_until_start = start_day_num - current_weekday
+            
+            start_date = today + timedelta(days=days_until_start)
+            
+            # Cria lista de dias disponíveis a partir do dia de início
+            available_days = []
+            for i in range(5):  # Segunda a sexta
+                day = start_date + timedelta(days=i)
+                if day.weekday() < 5:  # Apenas dias úteis
+                    available_days.append(day)
+        else:
+            available_days = []
+
+        # Processa apenas o primeiro título da lista (um card por vez)
+        if not titles:
+            return jsonify({'success': False, 'error': 'Nenhum título fornecido'})
+        
+        title = titles[0]
+        
+        # Define o prefixo baseado no tipo
+        if card_type == 'post':
+            prefix = "Criar Post:"
+        elif card_type == 'tutorial':
+            prefix = "Criar Tutorial:"
+        elif card_type == 'canva':
+            prefix = f"Criar {canva_type.capitalize()} Canva:"
+        else:
+            prefix = "Tarefa:"
+
+        # Calcula a data de vencimento
+        due_date = None
+        if distribute_week and available_days:
+            # Distribui os cards entre os dias disponíveis
+            day_index = card_index % len(available_days)
+            due_date = available_days[day_index].strftime("%Y-%m-%d") + "T23:59:59"
+
+        # Escolhe o responsável para este card (rotação entre os selecionados)
+        selected_assignee_id = None
+        if assignee_ids:
+            selected_assignee_id = assignee_ids[card_index % len(assignee_ids)]
+
+        # Monta a descrição do card
+        card_description = ""
+        
+        if source:
+            card_description += f"**Fonte:** {source}\n"
+        
+        if assignee_names:
+            card_description += f"**Responsáveis:** {', '.join(assignee_names)}\n"
+        
+        if due_date:
+            display_date = datetime.strptime(due_date, "%Y-%m-%dT%H:%M:%S").strftime("%d/%m/%Y")
+            card_description += f"**Prazo:** {display_date}\n"
+        
+        if card_description:
+            card_description += "\n"
+        
+        if card_type == 'canva':
+            card_description += f"**Tipo de Publicação:** {canva_type.capitalize()}\n\n"
+            card_description += "**Dimensões Recomendadas:**\n"
+            if canva_type == 'post':
+                card_description += "- 1080 x 1350 pixels\n\n"
+            elif canva_type == 'story':
+                card_description += "- 1080 x 1920 pixels\n\n"
+            
+            card_description += "**Instruções:**\n"
+            card_description += "1. Criar o material no Canva usando as dimensões acima\n"
+            card_description += "2. Ao finalizar, copiar o link do material\n"
+            card_description += "3. Anexar o link na descrição deste card\n\n"
+
+        # Cria o card no Trello
+        card = trello_client.get_list(os.getenv('TRELLO_LIST_ID')).add_card(
+            name=f"{prefix} {title}",
+            desc=card_description,
+            due=due_date
+        )
+
+        # Adiciona o responsável selecionado ao card
+        if selected_assignee_id:
+            card.assign(selected_assignee_id)
+
+        return jsonify({
+            'success': True, 
+            'created_count': 1,
+            'card_id': card.id,
+            'message': f'Card "{title}" criado com sucesso!'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     with app.app_context():
