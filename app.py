@@ -513,7 +513,10 @@ def create_batch_cards():
     assignee_ids = data.get('assignees', [])
     canva_type = data.get('canva_type', '')
     distribute_week = data.get('distribute_week', False)
+    distribute_period = data.get('distribute_period', False)
     start_day = data.get('start_day', 'monday')
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
     titles = data.get('titles', [])
     card_index = data.get('card_index', 0)
     
@@ -529,10 +532,24 @@ def create_batch_cards():
                         assignee_names.append(member.full_name)
                         break
 
-        # Calcula as datas da semana baseada no dia de início
+        # Calcula as datas disponíveis baseado no tipo de distribuição
         today = datetime.now()
+        available_days = []
         
-        if distribute_week:
+        if distribute_period and start_date and end_date:
+            # Distribuição por período específico
+            start = datetime.strptime(start_date, '%Y-%m-%d')
+            end = datetime.strptime(end_date, '%Y-%m-%d')
+            
+            current = start
+            while current <= end:
+                # Ignora sábados (5) e domingos (6)
+                if current.weekday() < 5:  # 0=segunda, 1=terça, ..., 4=sexta
+                    available_days.append(current)
+                current += timedelta(days=1)
+                
+        elif distribute_week:
+            # Distribuição na semana atual
             # Mapeia os dias da semana
             day_mapping = {
                 'monday': 0, 'tuesday': 1, 'wednesday': 2, 
@@ -552,7 +569,6 @@ def create_batch_cards():
             start_date = today + timedelta(days=days_until_start)
             
             # Cria lista de dias disponíveis a partir do dia de início
-            available_days = []
             for i in range(5):  # Segunda a sexta
                 day = start_date + timedelta(days=i)
                 if day.weekday() < 5:  # Apenas dias úteis
@@ -576,17 +592,30 @@ def create_batch_cards():
         else:
             prefix = "Tarefa:"
 
-        # Calcula a data de vencimento
+        # Escolhe o responsável e dia para este card (distribuição equilibrada)
+        selected_assignee_id = None
         due_date = None
-        if distribute_week and available_days:
-            # Distribui os cards entre os dias disponíveis
+        
+        if assignee_ids and (distribute_week or distribute_period) and available_days:
+            # Calcula quantos cards por responsável por dia
+            total_assignees = len(assignee_ids)
+            total_days = len(available_days)
+            
+            # Determina qual responsável e qual dia para este card
+            assignee_index = card_index % total_assignees
+            day_index = (card_index // total_assignees) % total_days
+            
+            selected_assignee_id = assignee_ids[assignee_index]
+            due_date = available_days[day_index].strftime("%Y-%m-%d") + "T23:59:59"
+            
+        elif assignee_ids:
+            # Se não há distribuição por dia, apenas rota entre responsáveis
+            selected_assignee_id = assignee_ids[card_index % len(assignee_ids)]
+            
+        elif (distribute_week or distribute_period) and available_days:
+            # Se não há responsáveis selecionados, apenas distribui por dia
             day_index = card_index % len(available_days)
             due_date = available_days[day_index].strftime("%Y-%m-%d") + "T23:59:59"
-
-        # Escolhe o responsável para este card (rotação entre os selecionados)
-        selected_assignee_id = None
-        if assignee_ids:
-            selected_assignee_id = assignee_ids[card_index % len(assignee_ids)]
 
         # Monta a descrição do card
         card_description = ""
